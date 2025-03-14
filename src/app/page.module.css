@@ -1,0 +1,42 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #D98324;
+  text-align: center;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #EFDCAB;
+}
+
+.button {
+  background-color: #443627;
+  color: #EFDCAB;
+  padding: 12px 24px;
+  font-size: 1.2rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.2);
+
+}
+
+.button:hover {
+  background-color: #443627;
+  box-shadow: 4px 8px 12px rgba(0, 0, 0, 0.3);
+
+
+}

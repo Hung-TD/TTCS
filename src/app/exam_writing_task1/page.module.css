@@ -1,0 +1,91 @@
+/* Container chính chia đôi màn hình */
+.container {
+  margin-top: 10px;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: fixed; /* Cố định vị trí, ngăn chặn scroll */
+  margin-top: 15px;
+}
+
+/* Panel bên trái (hiển thị ảnh) */
+.leftPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Căn nội dung lên trên */
+  align-items: center;
+  height: 100vh; /* Chiếm toàn bộ chiều cao viewport */
+  overflow-y: auto; /* Cho phép cuộn dọc khi nội dung quá dài */
+  padding-bottom: 200px;
+}
+
+
+/* Panel bên phải (ô nhập bài viết) */
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Ẩn tràn nội dung */
+  max-height: 100vh;
+}
+
+/* Thanh dọc chia đôi màn hình */
+.divider {
+  width: 6px;
+  background-color: #ccc;
+  cursor: col-resize;
+  min-height: 100%;
+  margin-top: 10px;
+}
+
+/* Container chứa ảnh */
+.imgContainer {
+  margin-top: 10px;
+  width: 90%;
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Ảnh đề thi */
+.imageTest {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Container chứa textarea */
+.textContainer {
+  width: 90%;
+  max-width: 90%;
+  display: flex;
+  height: 90%;
+  justify-content: center;
+  flex-direction: column;
+  padding-bottom: 20%;
+}
+
+/* Ô nhập bài viết */
+.inputText {
+  width: 100%;
+  height: 450px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  resize: none;
+  margin-top: 10px;
+}
+
+.wordCount{
+  margin-top: 20px;
+}
+
+.instructionText p{
+  margin-top: 10px;
+  
+}
