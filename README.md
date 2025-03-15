@@ -34,4 +34,6 @@
 
 ### **Triển khai**  
 - 🖥 **Backend:** VPS với **Gunicorn + Uvicorn** (FastAPI)  
-- 🌍 **Frontend:** Vercel (Next.js)  
+- 🌍 **Frontend:** Vercel (Next.js)
+---
+Báo cáo thực hành: [Tuần 1]()
