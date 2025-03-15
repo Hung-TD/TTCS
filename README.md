@@ -21,15 +21,15 @@
 
 ## 🛠 Công nghệ sử dụng  
 ### **Frontend**  
-- ⚛️ [Next.js](https://nextjs.org/) (React)  
-- 🎨 [Tailwind CSS](https://tailwindcss.com/)  
+- ⚛️ [Next.js](React)  
+- 🎨 [Tailwind CSS] 
 
 ### **Backend**  
-- 🚀 [FastAPI](https://fastapi.tiangolo.com/) (Python)  
-- 🤖 [Hugging Face Transformers](https://huggingface.co/facebook/bart-large-mnli) (`facebook/bart-large-mnli`)  
+- 🚀 [FastAPI]) (Python)  
+- 🤖 [Hugging Face Transformers] (`facebook/bart-large-mnli`)  
 
 ### **Database & Storage**  
-- 🔥 [Firebase Realtime Database](https://firebase.google.com/)  
+- 🔥 [Firebase Realtime Database] 
 - 🗄 PostgreSQL (tùy chọn)  
 
 ### **Triển khai**  
