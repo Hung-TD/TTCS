@@ -1,0 +1,137 @@
+/* Layout styles */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  width: 100%;
+  height: 70px;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.logo:hover {
+  transform: scale(1.1);
+}
+
+.navbar {
+  bottom: 9px;
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  position: relative; /* Đặt vị trí tương đối để căn chỉnh nút */
+}
+
+.navLinks {
+  display: flex;
+  gap: 125px;
+}
+
+.navLink {
+  text-decoration: none;
+  font-size: 24px;
+  color: #000000;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.containerButton {
+  background-color: #142F32;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 29px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  position: absolute;
+  right: 15px; /* Đẩy nút sang bên phải */
+}
+
+.btn{
+  border: none; /* Loại bỏ viền */
+  outline: none; /* Loại bỏ viền khi focus */
+  box-shadow: none; /* Loại bỏ hiệu ứng bóng */
+  background-color: #142F32;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.containerButton:hover, .btn:hover {
+  background-color: #1e464b;
+}
+
+.userContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar {
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.avatar:hover {
+  transform: scale(1.1);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  width: 120px;
+  padding: 8px 0;
+}
+
+.dropdownItem {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdownItem:hover {
+  background: #f2f2f2;
+}
+
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  color: #d9534f;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.logoutBtn:hover {
+  color: #c9302c;
+}

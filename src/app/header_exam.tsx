@@ -14,7 +14,7 @@ export default function HeaderExam({ onSubmit }: { onSubmit: () => void }) {
   const handleSubmit = async () => {
     try {
         // Gọi API Flask để chạy FastAPI
-        await fetch("http://127.0.0.1:5000/start-fastapi", { method: "GET" });
+        // await fetch("http://127.0.0.1:5000/start-fastapi", { method: "GET" });
         
         // Chuyển sang trang chấm điểm
         router.push("/ScoringWritingTask1");
