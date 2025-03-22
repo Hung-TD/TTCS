@@ -1,89 +1,83 @@
-from fastapi import FastAPI, HTTPException
-import firebase_admin
-from firebase_admin import credentials, db
-from pydantic import BaseModel
-from transformers import pipeline
-import os
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import pytesseract
+import cv2
+import numpy as np
+from PIL import Image
+from io import BytesIO
+import logging
+from transformers import pipeline
 
-# 🔹 Đảm bảo đường dẫn Firebase Credential là chính xác
-cred_path = os.getenv("FIREBASE_CREDENTIALS", os.path.abspath("examstore-e30ac-firebase-adminsdk-fbsvc-658d92a4f0.json"))
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-# 🔹 Khởi tạo Firebase nếu chưa có
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://examstore-e30ac-default-rtdb.firebaseio.com/'
-        })
-    except Exception as e:
-        print(f"⚠️ Lỗi khởi tạo Firebase: {e}")
-
-# 🔹 Khởi tạo FastAPI
 app = FastAPI()
 
-# 🔹 Thêm Middleware CORS
+# CORS Middleware (để frontend có thể gọi API)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Có thể thay "*" bằng domain cụ thể nếu cần bảo mật hơn
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Cho phép tất cả các method (GET, POST, ...)
-    allow_headers=["*"],  # Cho phép tất cả các headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# 🔹 Load mô hình Hugging Face
+# Cấu hình đường dẫn Tesseract (chỉnh lại nếu cần)
+pytesseract.pytesseract.tesseract_cmd = r"D:\Tesseract-OCR\tesseract.exe"
+
+# Load model chấm điểm NLP
+logger.info("Đang tải mô hình NLP...")
 try:
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    logger.info("✅ Mô hình NLP đã tải thành công!")
 except Exception as e:
-    print(f"⚠️ Lỗi tải mô hình: {e}")
-    classifier = None  # Tránh lỗi nếu model không tải được
+    logger.error(f"❌ Lỗi tải mô hình NLP: {e}")
+    classifier = None
 
-class GradeRequest(BaseModel):
-    text: str
 
-# 🔹 Thêm endpoint kiểm tra server hoạt động
-@app.get("/")
-async def root():
-    return {"message": "API đang chạy"}
-
-@app.post("/grade_text")
-async def grade_text():
+# 🟢 Endpoint nhận ảnh, trích xuất văn bản, và chấm điểm
+@app.post("/grade_image")
+async def grade_image(file: UploadFile = File(...)):
     try:
-        # 🔹 Lấy bài viết mới nhất từ Firebase
-        ref = db.reference("exam_writing_task1")
-        data = ref.get()
+        logger.info(f"📥 Nhận ảnh: {file.filename} ({file.content_type})")
+        
+        # 🖼️ Đọc ảnh từ file và chuyển sang numpy array
+        image = Image.open(BytesIO(await file.read()))
+        image_np = np.array(image)
 
-        if not data:
-            raise HTTPException(status_code=404, detail="Không tìm thấy bài viết trong Firebase")
+        # 🔍 Tiền xử lý ảnh với OpenCV
+        gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 
-        # 🔹 Tìm bài viết có timestamp mới nhất
-        latest_entry = max(data.values(), key=lambda x: x["timestamp"])
+        # 📜 Nhận diện văn bản bằng Tesseract OCR
+        extracted_text = pytesseract.image_to_string(thresh, lang="eng")
+        logger.info(f"🔍 Văn bản trích xuất: {extracted_text}")
 
-        text = latest_entry.get("content", "").strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="Nội dung bài viết trống")
+        if not extracted_text.strip():
+            raise HTTPException(status_code=400, detail="Không thể trích xuất văn bản từ ảnh!")
 
-        if classifier is None:
-            raise HTTPException(status_code=500, detail="Lỗi khi tải mô hình NLP")
-
-        # 🔹 Tiêu chí IELTS
+        # ✍️ Chấm điểm theo tiêu chí IELTS
         labels = [
             "Task Achievement",
             "Coherence & Cohesion",
             "Lexical Resource",
             "Grammatical Range & Accuracy"
         ]
+        
+        if classifier is None:
+            raise HTTPException(status_code=500, detail="Mô hình NLP chưa sẵn sàng")
+        
+        results = classifier(extracted_text, labels, multi_label=True)
+        logger.info(f"📊 Kết quả chấm điểm: {results}")
 
-        # 🔹 Phân loại văn bản
-        results = classifier(text, labels, multi_label=True)
-
-        # 🔹 Chuyển kết quả thành điểm từ 0-9
+        # 🔢 Chuyển đổi điểm từ 0-9
         scores = {label: round(score * 9, 1) for label, score in zip(results["labels"], results["scores"])}
 
         return {
-            "text": text,  # Gửi lại nội dung bài viết để kiểm tra
+            "extracted_text": extracted_text,
             "score": scores
         }
-
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý văn bản: {str(e)}")
+        logger.error(f"❌ Lỗi xử lý ảnh: {e}")
+        raise HTTPException(status_code=500, detail=f"Lỗi xử lý ảnh: {str(e)}")

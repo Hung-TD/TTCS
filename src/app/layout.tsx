@@ -29,6 +29,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false); // State để hiển thị dropdown
 
   useEffect(() => {
     setIsClient(true);
@@ -52,7 +53,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {/* Ẩn header ở trang SignUp & Login */}
-        {isClient && !loading && pathname !== "/SignUp" && pathname !== "/Login" && (
+        {isClient && !loading && pathname !== "/SignUp" && pathname !== "/Login" && !/^\/exam\/\d+$/.test(pathname) && pathname !== "/ResultPage" && (
           <header className={styles.header}>
             <Link href="/" className={styles.logoContainer}>
               <Image 
@@ -66,19 +67,28 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <nav className={styles.navbar}>
               <div className={styles.navLinks}>
                 <Link href="/tips" className={styles.navLink}>Tip</Link>
-                <Link href="/practice" className={styles.navLink}>Practice</Link>
+                <Link href="/PracPage" className={styles.navLink}>Practice</Link>
                 <Link href="/exam" className={styles.navLink}>Exam</Link>
               </div>
               {user ? (
-                <div className={styles.userMenu}>
+                <div 
+                  className={styles.userMenu}
+                  onMouseEnter={() => setShowDropdown(true)}
+                  onMouseLeave={() => setShowDropdown(false)}
+                >
                   <Image 
-                    src="/avatar-placeholder.png"
+                    src="/avatar.jpg"
                     alt="User Avatar"
                     width={40}
                     height={40}
                     className={styles.avatar}
                   />
-                  <button onClick={handleLogout} className={styles.logoutBtn}>Logout</button>
+                  {showDropdown && (
+                    <div className={styles.dropdownMenu}>
+                      <Link href="/account" className={styles.dropdownItem}>Account</Link>
+                      <button onClick={handleLogout} className={styles.dropdownItem}>Logout</button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Link className={styles.containerButton} href="/SignUp">

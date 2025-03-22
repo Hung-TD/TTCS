@@ -1,7 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth"; // Import Auth
+import { getDatabase } from "firebase/database"; // Nếu dùng Realtime Database
+import { getFirestore } from "firebase/firestore"; // Nếu dùng Firestore
+import { getStorage } from "firebase/storage";
 
+// Cấu hình Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyA5-MjdeShpChqTjo3UDpT-0CgLOA5WzKE",
   authDomain: "examstore-e30ac.firebaseapp.com",
@@ -13,9 +16,16 @@ const firebaseConfig = {
   databaseURL: "https://examstore-e30ac-default-rtdb.firebaseio.com/",
 };
 
-// Khởi tạo Firebase
+// Khởi tạo Firebase App
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
 
-export { auth, database };
+// Khởi tạo Firebase Auth
+const auth = getAuth(app); // <-- Đảm bảo đã có dòng này
+
+// Khởi tạo Database (nếu cần)
+const db = getDatabase(app); 
+const firestore = getFirestore(app);
+const storage = getStorage(app);
+
+// Export để sử dụng trong các file khác
+export { app, auth, db, firestore, storage };

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import "./login.css";
+import Header from "@/app/HeaderEnter/header_enter";
 import { auth } from "../firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation"; 
@@ -33,6 +34,7 @@ const Login: React.FC = () => {
 
     return (
         <div className="container">
+            <Header /> {/* Giữ nguyên Header, không truyền user/onLogout */}
             <div className="login-box">
                 <form onSubmit={handleSubmit}>
                     <label>Email:</label>
