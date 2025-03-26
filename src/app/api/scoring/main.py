@@ -1,89 +1,123 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+import cv2
+import numpy as np
+import pytesseract
+from transformers import pipeline
 import firebase_admin
 from firebase_admin import credentials, db
-from pydantic import BaseModel
-from transformers import pipeline
-import os
-from fastapi.middleware.cors import CORSMiddleware
+from io import BytesIO
+from PIL import Image
+import requests
+from difflib import SequenceMatcher
 
-# 🔹 Đảm bảo đường dẫn Firebase Credential là chính xác
-cred_path = os.getenv("FIREBASE_CREDENTIALS", os.path.abspath("examstore-e30ac-firebase-adminsdk-fbsvc-658d92a4f0.json"))
-
-# 🔹 Khởi tạo Firebase nếu chưa có
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://examstore-e30ac-default-rtdb.firebaseio.com/'
-        })
-    except Exception as e:
-        print(f"⚠️ Lỗi khởi tạo Firebase: {e}")
-
-# 🔹 Khởi tạo FastAPI
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+pytesseract.pytesseract.tesseract_cmd = r"D:\Tesseract-OCR\tesseract.exe"
 app = FastAPI()
 
-# 🔹 Thêm Middleware CORS
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Có thể thay "*" bằng domain cụ thể nếu cần bảo mật hơn
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Cho phép tất cả các method (GET, POST, ...)
-    allow_headers=["*"],  # Cho phép tất cả các headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# 🔹 Load mô hình Hugging Face
+# Kết nối Firebase Realtime Database
+try:
+    cred = credentials.Certificate("examstore-e30ac-firebase-adminsdk-fbsvc-658d92a4f0.json")
+    firebase_admin.initialize_app(cred, {
+        "databaseURL": "https://examstore-e30ac-default-rtdb.firebaseio.com/"
+    })
+    db_ref = db.reference("/exam_writing_task1")
+    logger.info("✅ Kết nối Firebase thành công!")
+except Exception as e:
+    logger.error(f"❌ Lỗi kết nối Firebase: {e}")
+    db_ref = None
+
+# Load mô hình NLP
+logger.info("Đang tải mô hình NLP...")
 try:
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    logger.info("✅ Mô hình NLP đã tải thành công!")
 except Exception as e:
-    print(f"⚠️ Lỗi tải mô hình: {e}")
-    classifier = None  # Tránh lỗi nếu model không tải được
+    logger.error(f"❌ Lỗi tải mô hình NLP: {e}")
+    classifier = None
 
-class GradeRequest(BaseModel):
-    text: str
+# Tiền xử lý ảnh với OpenCV để tăng độ chính xác OCR
+def preprocess_image(image: np.array):
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                 cv2.THRESH_BINARY, 11, 2)
+    return gray
 
-# 🔹 Thêm endpoint kiểm tra server hoạt động
-@app.get("/")
-async def root():
-    return {"message": "API đang chạy"}
+# Phân tích chi tiết biểu đồ cột
+def analyze_bar_chart(contours):
+    bar_heights = [cv2.boundingRect(cnt)[3] for cnt in contours]
+    avg_height = np.mean(bar_heights) if bar_heights else 0
+    return {"chart_type": "Bar Chart", "num_bars": len(contours), "avg_bar_height": avg_height}
 
-@app.post("/grade_text")
-async def grade_text():
+# Phân tích chi tiết biểu đồ đường
+def analyze_line_graph(lines):
+    num_lines = len(lines) if lines is not None else 0
+    return {"chart_type": "Line Graph", "num_lines": num_lines}
+
+# Phân tích chi tiết biểu đồ tròn
+def analyze_pie_chart(circles):
+    num_segments = len(circles[0]) if circles is not None else 0
+    return {"chart_type": "Pie Chart", "num_segments": num_segments}
+
+# Phân tích chi tiết bảng số liệu
+def analyze_table(horizontal_lines, vertical_lines):
+    return {"chart_type": "Table", "num_rows": horizontal_lines, "num_columns": vertical_lines}
+
+# Phân tích chi tiết biểu đồ bản đồ
+def analyze_map_chart(num_contours):
+    return {"chart_type": "Map", "num_contours": num_contours}
+
+# Phân tích chi tiết biểu đồ kết hợp
+def analyze_multiple_chart(bar_count, line_count):
+    return {"chart_type": "Multiple Chart", "num_bars": bar_count, "num_lines": line_count}
+
+# Phân tích biểu đồ
+def extract_chart_data(image: np.array):
     try:
-        # 🔹 Lấy bài viết mới nhất từ Firebase
-        ref = db.reference("exam_writing_task1")
-        data = ref.get()
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
 
-        if not data:
-            raise HTTPException(status_code=404, detail="Không tìm thấy bài viết trong Firebase")
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        num_contours = len(contours)
 
-        # 🔹 Tìm bài viết có timestamp mới nhất
-        latest_entry = max(data.values(), key=lambda x: x["timestamp"])
+        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=30, minRadius=30, maxRadius=300)
+        if circles is not None:
+            return analyze_pie_chart(circles)
 
-        text = latest_entry.get("content", "").strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="Nội dung bài viết trống")
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+        if lines is not None and len(lines) > 10:
+            return analyze_line_graph(lines)
 
-        if classifier is None:
-            raise HTTPException(status_code=500, detail="Lỗi khi tải mô hình NLP")
+        horizontal_lines = sum(1 for line in lines if abs(line[0][1] - line[0][3]) < 5) if lines is not None else 0
+        vertical_lines = sum(1 for line in lines if abs(line[0][0] - line[0][2]) < 5) if lines is not None else 0
+        if horizontal_lines > 3 and vertical_lines > 3:
+            return analyze_table(horizontal_lines, vertical_lines)
 
-        # 🔹 Tiêu chí IELTS
-        labels = [
-            "Task Achievement",
-            "Coherence & Cohesion",
-            "Lexical Resource",
-            "Grammatical Range & Accuracy"
-        ]
+        rect_contours = [cnt for cnt in contours if cv2.boundingRect(cnt)[2] > 20 and cv2.boundingRect(cnt)[3] > 50]
+        if len(rect_contours) > 5:
+            return analyze_bar_chart(rect_contours)
 
-        # 🔹 Phân loại văn bản
-        results = classifier(text, labels, multi_label=True)
+        if num_contours > 50:
+            return analyze_map_chart(num_contours)
 
-        # 🔹 Chuyển kết quả thành điểm từ 0-9
-        scores = {label: round(score * 9, 1) for label, score in zip(results["labels"], results["scores"])}
+        if len(rect_contours) > 5 and lines is not None and len(lines) > 10:
+            return analyze_multiple_chart(len(rect_contours), len(lines))
 
-        return {
-            "text": text,  # Gửi lại nội dung bài viết để kiểm tra
-            "score": scores
-        }
+        return {"chart_type": "Unknown", "num_contours": num_contours}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý văn bản: {str(e)}")
+        print(f"❌ Lỗi phân tích biểu đồ: {e}")
+        return {"chart_type": "Unknown", "num_contours": 0}

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import "./signup.css";
-import Header from "@/app/Header/header_enter";
+import Header from "@/app/HeaderEnter/header_enter";
 import { auth } from "../firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";

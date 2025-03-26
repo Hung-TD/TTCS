@@ -1,28 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
-import HeaderExam from "@/app/header_exam";
-import { db } from "@/app/SaveExamText/firebase";
-import { ref, set, push } from "firebase/database"; // Import Firebase Database
-import styles from "./page.module.css";
+import HeaderExam from "@/app/HeaderExam/header_exam";
+import styles from "./exampage.module.css";
+import { useParams } from "next/navigation";
+import { db } from "@/app/firebaseConfig";
+import { ref, set, push } from "firebase/database";
+
+// Kết nối Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function ExamPage() {
-  
-  const [imageSrc, setImageSrc] = useState("");
+  const { id } = useParams(); // ✅ Lấy ID từ URL
   const [panelWidth, setPanelWidth] = useState(50);
-  const [text, setText] = useState(""); // Nội dung bài viết
-  const [wordCount, setWordCount] = useState(0); // Số từ
+  const [text, setText] = useState("");
+  const [wordCount, setWordCount] = useState(0);
+  const [examData, setExamData] = useState<any>(null);
+  const [loading, setLoading] = useState(false); // ✅ Thêm loading state
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+  // ✅ Gọi API lấy đề từ Supabase theo ID
   useEffect(() => {
-    fetch("/api/random-image")
-      .then((res) => res.json())
-      .then((data) => setImageSrc(data.image));
-  }, []);
+    if (!id) return; // 🔹 Kiểm tra ID hợp lệ trước khi truy vấn
+
+    const fetchExamData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("task1")
+        .select("*")
+        .eq("id", Number(id)) // ✅ Truy vấn đề theo ID
+        .single();
+
+      if (error) {
+        console.error("Lỗi khi lấy đề thi:", error.message);
+      } else {
+        setExamData(data);
+        setImageUrl(data?.image_url || null); // ✅ Cập nhật URL ảnh
+      }
+      setLoading(false);
+    };
+
+    fetchExamData();
+  }, [id]); // 🔹 useEffect chạy lại khi ID thay đổi
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.preventDefault();
-    
     const startX = event.clientX;
     const startWidth = panelWidth;
 
@@ -40,19 +67,24 @@ export default function ExamPage() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   };
-  
+
   const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = event.target.value;
     setText(newText);
-    
-    // Đếm số từ (loại bỏ khoảng trắng thừa)
+
     const words = newText.trim().split(/\s+/).filter(word => word.length > 0);
     setWordCount(words.length);
   };
-  
+
   const handleSubmit = async () => {
     if (text.trim() === "") {
       alert("❌ Bài viết không được để trống!");
+      return;
+    }
+
+    if (!db) {
+      console.error("❌ Firebase chưa được khởi tạo!");
+      alert("❌ Lỗi hệ thống, vui lòng thử lại sau!");
       return;
     }
 
@@ -62,6 +94,7 @@ export default function ExamPage() {
         content: text,
         wordCount: wordCount,
         timestamp: new Date().toISOString(),
+        imageUrl: imageUrl || "", // ✅ Lưu URL ảnh vào Firebase
       });
 
       alert("✅ Bài viết đã được lưu thành công!");
@@ -75,37 +108,39 @@ export default function ExamPage() {
 
   return (
     <>
-      {/* Thêm Header */}
-      <HeaderExam onSubmit={handleSubmit} />
-      <div className={styles.headerSpacing}></div> {/* Tạo khoảng trống tránh header đè nội dung */}
-
+      <HeaderExam onSubmit={handleSubmit} imageUrl={imageUrl} />
       <div className={styles.container}>
+        {/* Panel bên trái */}
         <div className={styles.leftPanel} style={{ flex: panelWidth }}>
           <div className={styles.instructionText}>
-            <h3>Writing Task 1</h3>
-            <p>You should spend about 20 minutes on this task.</p>
-            <p>The graph below shows the production levels of the main kinds of fuel in the UK between 1981 and 2000.</p>
-            <p>Summarize the information by selecting and reporting the main features and making comparisons where relevant.</p>
-            <p><strong>You should write at least 150 words.</strong></p>
+            {loading ? (
+              <h3>🔄 Đang tải đề thi...</h3>
+            ) : (
+              <>
+                <h3>{examData?.title || "Không tìm thấy đề"}</h3>
+                <p>{examData?.description || "Không có mô tả."}</p>
+              </>
+            )}
           </div>
           <div className={styles.imgContainer}>
-            {imageSrc ? (
+            {imageUrl ? (
               <Image
-                src={imageSrc}
+                src={imageUrl}
                 alt="Đề thi IELTS"
                 width={500}
                 height={500}
                 className={styles.imageTest}
               />
             ) : (
-              <p>Đang tải đề thi...</p>
+              <p>🔄 Đang tải đề thi...</p>
             )}
           </div>
         </div>
-    
-        {/* Thanh dọc chia đôi màn hình */}
+
+        {/* Thanh chia đôi màn hình */}
         <div className={styles.divider} onMouseDown={handleMouseDown}></div>
 
+        {/* Panel bên phải */}
         <div className={styles.rightPanel} style={{ flex: 100 - panelWidth }}>
           <div className={styles.textContainer}>
             <textarea 
@@ -119,5 +154,5 @@ export default function ExamPage() {
         </div>
       </div>
     </>
-  );  
+  );
 }
