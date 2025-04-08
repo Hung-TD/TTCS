@@ -6,8 +6,15 @@ import Image from "next/image";
 import HeaderExam from "@/app/HeaderPrac/header_exam";
 import styles from "./exampage.module.css";
 import { useParams } from "next/navigation";
-import { db } from "@/app/firebaseConfig";
+import { db, app } from "@/app/firebaseConfig";
 import { ref, set, push } from "firebase/database";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc
+} from "firebase/firestore";
 
 // Kết nối Supabase
 const supabase = createClient(
@@ -21,32 +28,69 @@ export default function ExamPage() {
   const [text, setText] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [examData, setExamData] = useState<any>(null);
-  const [loading, setLoading] = useState(false); // ✅ Thêm loading state
+  const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // ✅ Hàm lưu đề thi vào Firestore
+  const saveExamToFirestore = async (examData: any) => {
+    try {
+      const firestore = getFirestore(app);
+      const examRef = doc(firestore, "task1_exams", examData.id.toString());
+
+      const examDoc = await getDoc(examRef);
+
+      const examPayload = {
+        exam_id: examData.id,
+        image_url: examData.image_url,
+        title: examData.title,
+        description: examData.description,
+        description_title: examData.description_title,
+        issue: examData.issue || "",
+        rules: examData.rules || "",
+        updated_at: new Date().toISOString()
+      };
+
+      if (!examDoc.exists()) {
+        await setDoc(examRef, {
+          ...examPayload,
+          created_at: new Date().toISOString(),
+          status: "active",
+          type: "task1"
+        });
+        console.log("✅ Đề thi mới đã được lưu vào Firestore");
+      } else {
+        await updateDoc(examRef, examPayload);
+        console.log("✅ Đề thi đã được cập nhật trong Firestore");
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi lưu đề thi vào Firestore:", error);
+    }
+  };
 
   // ✅ Gọi API lấy đề từ Supabase theo ID
   useEffect(() => {
-    if (!id) return; // 🔹 Kiểm tra ID hợp lệ trước khi truy vấn
+    if (!id) return;
 
     const fetchExamData = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("task1")
         .select("*")
-        .eq("id", Number(id)) // ✅ Truy vấn đề theo ID
+        .eq("id", Number(id))
         .single();
 
       if (error) {
         console.error("Lỗi khi lấy đề thi:", error.message);
       } else {
         setExamData(data);
-        setImageUrl(data?.image_url || null); // ✅ Cập nhật URL ảnh
+        setImageUrl(data?.image_url || null);
+        await saveExamToFirestore(data); // ✅ Gọi sau khi lấy đề
       }
       setLoading(false);
     };
 
     fetchExamData();
-  }, [id]); // 🔹 useEffect chạy lại khi ID thay đổi
+  }, [id]);
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.preventDefault();
@@ -89,17 +133,17 @@ export default function ExamPage() {
     }
 
     try {
-      const newTextRef = push(ref(db, "exam_writing_task1")); // Tạo ID ngẫu nhiên
+      const newTextRef = push(ref(db, "exam_writing_task1"));
       await set(newTextRef, {
         content: text,
         wordCount: wordCount,
         timestamp: new Date().toISOString(),
-        imageUrl: imageUrl || "", // ✅ Lưu URL ảnh vào Firebase
-        issue: examData?.issue || "",
+        imageUrl: imageUrl || "",
+        issue: examData?.issue || ""
       });
 
       alert("✅ Bài viết đã được lưu thành công!");
-      setText(""); // Reset textarea sau khi lưu
+      setText("");
       setWordCount(0);
     } catch (error) {
       console.error("❌ Lỗi khi lưu:", error);
@@ -122,7 +166,6 @@ export default function ExamPage() {
                 <p>{examData?.description || "Không có mô tả."}</p>
                 <p>{examData?.issue || "Không có mô tả."}</p>
                 <p>{examData?.rules || "Không có mô tả."}</p>
-
               </>
             )}
           </div>
@@ -147,9 +190,9 @@ export default function ExamPage() {
         {/* Panel bên phải */}
         <div className={styles.rightPanel} style={{ flex: 100 - panelWidth }}>
           <div className={styles.textContainer}>
-            <textarea 
-              className={styles.inputText} 
-              placeholder="Nhập bài viết của bạn..." 
+            <textarea
+              className={styles.inputText}
+              placeholder="Nhập bài viết của bạn..."
               value={text}
               onChange={handleTextChange}
             />

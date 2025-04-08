@@ -6,25 +6,31 @@ import numpy as np
 import pytesseract
 from transformers import pipeline
 import firebase_admin
-from firebase_admin import credentials, db
+from firebase_admin import credentials, db, firestore
 from io import BytesIO
 from PIL import Image
 import requests
 from difflib import SequenceMatcher
 from sentence_transformers import SentenceTransformer, util
 import re
+import os
+from dotenv import load_dotenv
 
-# Cấu hình logging
+# 🔹 Cấu hình logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Cấu hình OCR (đường dẫn Tesseract)
+# 🔹 Cấu hình OCR
 pytesseract.pytesseract.tesseract_cmd = r"D:\Tesseract-OCR\tesseract.exe"
 
+# 🔹 Load biến môi trường
+load_dotenv()
+
+# 🔹 Khởi tạo FastAPI
 app = FastAPI()
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# CORS Middleware
+# 🔹 CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,19 +39,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Kết nối Firebase
+# 🔹 Kết nối Firebase
 try:
     cred = credentials.Certificate("examstore-e30ac-firebase-adminsdk-fbsvc-658d92a4f0.json")
     firebase_admin.initialize_app(cred, {
         "databaseURL": "https://examstore-e30ac-default-rtdb.firebaseio.com/"
     })
     db_ref = db.reference("/exam_writing_task1")
-    logger.info("✅ Kết nối Firebase thành công!")
+    firestore_db = firestore.client()
+    logger.info("✅ Kết nối Firebase và Firestore thành công!")
 except Exception as e:
     logger.error(f"❌ Lỗi kết nối Firebase: {e}")
     db_ref = None
+    firestore_db = None
 
-# Load mô hình NLP
+# 🔹 Load mô hình NLP
 try:
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
     logger.info("✅ Mô hình NLP đã tải thành công!")
@@ -53,7 +61,7 @@ except Exception as e:
     logger.error(f"❌ Lỗi tải mô hình NLP: {e}")
     classifier = None
 
-# 🔹 Tiền xử lý ảnh để tăng độ chính xác OCR
+# 🔹 Tiền xử lý ảnh
 def preprocess_image(image: np.array):
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -61,7 +69,7 @@ def preprocess_image(image: np.array):
                                  cv2.THRESH_BINARY, 11, 2)
     return gray
 
-# 🔹 Trích xuất dữ liệu từ biểu đồ
+# 🔹 Phân tích biểu đồ
 def extract_chart_data(image: np.array):
     try:
         edges = cv2.Canny(image, 50, 150)
@@ -81,10 +89,9 @@ def extract_chart_data(image: np.array):
         if hough_lines is not None and len(hough_lines) > 5:
             chart_type = "Process Diagram"
 
-        # OCR trích xuất văn bản từ biểu đồ
         text_in_image = pytesseract.image_to_string(image, config='--psm 6').strip()
-        numbers_in_image = re.findall(r'\d+', text_in_image)  # Lấy số từ ảnh
-        keywords = [word for word in text_in_image.split() if word.isalpha()]  # Lấy từ khóa
+        numbers_in_image = re.findall(r'\d+', text_in_image)
+        keywords = [word for word in text_in_image.split() if word.isalpha()]
 
         return {
             "chart_type": chart_type,
@@ -97,76 +104,112 @@ def extract_chart_data(image: np.array):
     except Exception as e:
         logger.error(f"❌ Lỗi phân tích biểu đồ: {e}")
         return {"chart_type": "Unknown", "num_contours": 0, "num_lines": 0, "numbers": [], "keywords": [], "extracted_text": ""}
-    
-# 🔹 So sánh văn bản OCR với văn bản gốc
-def compare_texts(extracted_text: str, expected_text: str) -> float:
-    first_sentence = extracted_text.split(".")[0].strip()
-    similarity_ratio = SequenceMatcher(None, first_sentence.lower(), expected_text.lower()).ratio()
-    return round(similarity_ratio * 10, 1)
 
-# 🔹 Đánh giá độ chính xác của dữ liệu
-def evaluate_data_accuracy(extracted_text: str, chart_data: dict) -> float:
-    extracted_numbers = re.findall(r'\d+', extracted_text)
-    extracted_keywords = [word for word in extracted_text.split() if word.isalpha()]
-
-    number_match_ratio = len(set(extracted_numbers) & set(chart_data["numbers"])) / max(1, len(chart_data["numbers"]))
-    keyword_match_ratio = len(set(extracted_keywords) & set(chart_data["keywords"])) / max(1, len(chart_data["keywords"]))
-    
-    return round((number_match_ratio + keyword_match_ratio) / 2 * 10, 1)
-
-# 🔹 Đánh giá độ tương đồng ngữ nghĩa
-def semantic_similarity(expected_issue: str, extracted_text: str) -> float:
+# 🔹 Lấy description_title từ Firestore
+def get_latest_description_title_from_firestore():
     try:
-        first_sentence = extracted_text.split(".")[0].strip()
-        emb1 = embedding_model.encode(expected_issue, convert_to_tensor=True)
-        emb2 = embedding_model.encode(first_sentence, convert_to_tensor=True)
-        similarity = util.pytorch_cos_sim(emb1, emb2).item()
-        return round(similarity * 10, 1)
-    except Exception as e:
-        logger.error(f"❌ Lỗi khi tính toán độ tương đồng ngữ nghĩa: {e}")
-        return 0.0
+        docs = firestore_db.collection("task1_exams").stream()
+        latest_doc = None
+        latest_id = -1
 
-# 🔹 API lấy dữ liệu từ Firebase và chấm điểm
+        for doc in docs:
+            try:
+                doc_id = int(doc.id)
+                if doc_id > latest_id:
+                    latest_id = doc_id
+                    latest_doc = doc
+            except ValueError:
+                continue
+
+        if latest_doc:
+            data = latest_doc.to_dict()
+            return data.get("description_title", None)
+
+        return None
+    except Exception as e:
+        logger.error(f"❌ Lỗi khi lấy description_title từ Firestore: {e}")
+        return None
+
+# 🔹 API chính
 @app.get("/analyze_latest_exam")
 async def analyze_latest_exam():
     if db_ref is None:
-        raise HTTPException(status_code=500, detail="Lỗi kết nối Firebase!")
+        logger.error("❌ Firebase connection not available")
+        raise HTTPException(status_code=500, detail="Firebase connection error")
 
     try:
+        description_title = get_latest_description_title_from_firestore()
+        logger.info(f"✅ Description Title from Firestore: {description_title}")
+
         latest_data = db_ref.order_by_key().limit_to_last(1).get()
         if not latest_data:
-            raise HTTPException(status_code=404, detail="Không tìm thấy dữ liệu!")
+            logger.error("❌ No data found in Firebase")
+            raise HTTPException(status_code=404, detail="No data found")
 
         latest_entry = list(latest_data.values())[0]
-        image_url = latest_entry.get("imageUrl", "")
-        expected_text = latest_entry.get("content", "")
-        expected_issue = latest_entry.get("issue", "")
+        image_url = latest_entry.get("imageUrl")
+        student_answer = latest_entry.get("content")
+
+        if not all([image_url, student_answer, description_title]):
+            missing_fields = []
+            if not image_url: missing_fields.append("imageUrl")
+            if not student_answer: missing_fields.append("content")
+            if not description_title: missing_fields.append("description_title")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required fields: {', '.join(missing_fields)}"
+            )
 
         response = requests.get(image_url)
         img_pil = Image.open(BytesIO(response.content)).convert("RGB")
         img_np = np.array(img_pil)
         processed_img = preprocess_image(img_np)
-
-        extracted_text = pytesseract.image_to_string(processed_img, config='--psm 6').strip()
         chart_data = extract_chart_data(processed_img)
 
-        similarity_score_content = compare_texts(extracted_text, expected_text)
-        similarity_score_issue = semantic_similarity(extracted_text, expected_issue)
-        data_accuracy = evaluate_data_accuracy(extracted_text, chart_data)
-
-        # 🔹 Gọi `grade_text` để lấy điểm đầy đủ
         graded_result = await grade_text(
-            expected_text, expected_issue, extracted_text, chart_data,
-            similarity_score_content, similarity_score_issue
+            expected_text=description_title,
+            description=description_title,
+            student_answer=student_answer
         )
 
-        return graded_result  # Trả về kết quả đầy đủ từ `grade_text`
+        graded_result["chart_analysis"] = chart_data
+        return graded_result
 
     except Exception as e:
-        logger.error(f"❌ Lỗi xử lý bài thi: {e}")
-        raise HTTPException(status_code=500, detail=f"Lỗi xử lý: {str(e)}")
+        logger.error(f"❌ Error processing exam: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-async def grade_text(expected_text: str, expected_issue: str, extracted_text: str, chart_data: dict, similarity_score_content: float, similarity_score_issue: float):
+# 🔹 So sánh ngữ nghĩa & phân tích
+def semantic_similarity(text1: str, text2: str) -> dict:
+    try:
+        emb1 = embedding_model.encode(text1, convert_to_tensor=True)
+        emb2 = embedding_model.encode(text2, convert_to_tensor=True)
+        overall_similarity = util.pytorch_cos_sim(emb1, emb2).item()
+
+        aspects = {
+            "temporal_comparison": "compares employment data between 1993 and 2003",
+            "gender_distribution": "analyzes employment by gender in different sectors",
+            "sector_changes": "identifies which sectors increased or decreased",
+            "overall_trends": "summarizes general workforce trends across all sectors",
+            "structure": "has a clear structure with introduction, body and conclusion"
+        }
+
+
+        aspect_scores = {}
+        for aspect, description in aspects.items():
+            score = classifier(text2, [description], multi_label=False)
+            aspect_scores[aspect] = round(score['scores'][0] * 10, 1)
+
+        return {
+            "overall": round(overall_similarity * 10, 1),
+            "aspects": aspect_scores
+        }
+    except Exception as e:
+        logger.error(f"❌ Error calculating semantic similarity: {e}")
+        return {"overall": 0.0, "aspects": {}}
+
+# 🔹 Chấm điểm
+async def grade_text(expected_text: str, description: str, student_answer: str):
     try:
         labels = [
             "Task Achievement",
@@ -176,67 +219,54 @@ async def grade_text(expected_text: str, expected_issue: str, extracted_text: st
         ]
 
         if classifier is None:
-            raise HTTPException(status_code=500, detail="Mô hình NLP chưa sẵn sàng")
+            raise HTTPException(status_code=500, detail="NLP model not ready")
 
-        # 🔹 Chấm điểm dựa trên nội dung bài viết
-        results_content = classifier(expected_text, labels, multi_label=True)
-        scores_content = {label: round(score * 9, 1) for label, score in zip(results_content["labels"], results_content["scores"])}
+        similarity_results = semantic_similarity(description, student_answer)
+        results = classifier(student_answer, labels, multi_label=True)
+        base_scores = {label: round(score * 9, 1) for label, score in zip(results["labels"], results["scores"])}
 
-        # 🔹 Chấm điểm dựa trên đề bài
-        results_issue = classifier(expected_issue, labels, multi_label=True)
-        scores_issue = {label + " (Issue)": round(score * 9, 1) for label, score in zip(results_issue["labels"], results_issue["scores"])}
+        aspect_weights = {
+            "temporal_comparison": 0.25,
+            "gender_distribution": 0.25,
+            "sector_changes": 0.2,
+            "overall_trends": 0.2,
+            "structure": 0.1
+        }
 
-        # 🔹 So sánh ngữ nghĩa giữa bài viết và đề bài
-        embedding_issue = embedding_model.encode(expected_issue, convert_to_tensor=True)
-        embedding_exam = embedding_model.encode(extracted_text, convert_to_tensor=True)
-        semantic_similarity = util.pytorch_cos_sim(embedding_exam, embedding_issue).item()
-        semantic_score = round(semantic_similarity * 10, 1)  # Thang điểm 10
 
-        # 🔹 Đánh giá độ chính xác dữ liệu dựa trên biểu đồ
-        data_accuracy = evaluate_data_accuracy(extracted_text, chart_data)  # Thang điểm 10
+        aspect_score = sum(
+            similarity_results["aspects"].get(aspect, 0) * weight 
+            for aspect, weight in aspect_weights.items()
+        )
 
-        # 🔹 Điều chỉnh điểm dựa trên độ tương đồng ngữ nghĩa
-        if semantic_similarity < 0.5:
-            penalty_factor = (0.5 - semantic_similarity) * 2  # Nếu lệch chủ đề, giảm tối đa 50%
-        else:
-            penalty_factor = 0  # Không giảm điểm nếu đủ tương đồng
+        final_scores = base_scores.copy()
+        final_scores["Task Achievement"] = round((base_scores["Task Achievement"] + aspect_score) / 2, 1)
 
-        for key in scores_content:
-            scores_content[key] *= (1 - penalty_factor)
+        final_score = round(sum(final_scores.values()) / len(final_scores), 1)
 
-        # 🔹 Điều chỉnh thang điểm của `Data Accuracy`
-        data_accuracy_scaled = round(data_accuracy * 9 / 10, 1)  # Quy đổi về thang 9
-
-        # 🔹 Tính điểm tổng hợp
-        final_score = round((similarity_score_content + similarity_score_issue + data_accuracy_scaled) / 3, 1)
-
-        # 🔹 Xếp loại bài viết
         if final_score >= 8.5:
-            grade = "Xuất sắc"
+            grade = "Excellent"
         elif final_score >= 7:
-            grade = "Tốt"
+            grade = "Good"
         elif final_score >= 5:
-            grade = "Đạt yêu cầu"
+            grade = "Satisfactory"
         else:
-            grade = "Cần cải thiện"
+            grade = "Needs Improvement"
 
-        final_scores = {**scores_content, **scores_issue}
-        final_scores["Text Similarity (Content)"] = similarity_score_content
-        final_scores["Text Similarity (Issue)"] = similarity_score_issue
-        final_scores["Semantic Similarity (Issue)"] = semantic_score
-        final_scores["Data Accuracy"] = data_accuracy
-        final_scores["Chart Type"] = chart_data["chart_type"]
-        final_scores["Number of Elements in Chart"] = chart_data["num_contours"]
+        final_scores["Content Similarity"] = similarity_results["overall"]
+        final_scores["Temporal Comparison"] = similarity_results["aspects"].get("temporal_comparison", 0)
+        final_scores["Gender Distribution"] = similarity_results["aspects"].get("gender_distribution", 0)
+        final_scores["Sector Changes"] = similarity_results["aspects"].get("sector_changes", 0)
+        final_scores["Overall Trends"] = similarity_results["aspects"].get("overall_trends", 0)
+        final_scores["Structure Quality"] = similarity_results["aspects"].get("structure", 0)
         final_scores["Final Score"] = final_score
         final_scores["Grade"] = grade
 
         return {
-            "expected_text": expected_text,
-            "expected_issue": expected_issue,
-            "exam_text": extracted_text,
-            "chart_analysis": chart_data,
+            "description": description,
+            "student_answer": student_answer,
             "score": final_scores
         }
     except Exception as e:
-        logger.error(f"❌ Lỗi chấm điểm bài thi: {e}")
-        raise HTTPException(status_code=500, detail=f"Lỗi chấm điểm: {str(e)}")
+        logger.error(f"❌ Error grading text: {e}")
+        raise HTTPException(status_code=500, detail=f"Grading error: {str(e)}")
