@@ -7,6 +7,7 @@ import { doc, getDoc, getFirestore, setDoc, updateDoc } from "firebase/firestore
 import styles from "./account.module.css";
 import Link from "next/link";
 import Header from "../../HeaderLayout/page";
+import "../../globals.css";
 
 // Khai báo kiểu dữ liệu UserAccount
 export interface UserAccount {
@@ -112,11 +113,12 @@ export default function Account() {
   };
 
   return (
-    <div className={styles.accountContainer}>
+    <div className={styles.container}>
       <Header />
+      <div className={styles.accountContainer}>
       <div className={styles.navbar}>
-        <Link href="#" className={styles.navItem}>Score</Link>
-        <Link href="#" className={styles.navItem}>Calendar</Link>
+        <Link href="./ScorePage" className={styles.navItem}>Score</Link>
+        <Link href="./CalendarPage" className={styles.navItem}>Calendar</Link>
       </div>
       <div className={styles.profileSection}>
         <img src={user?.photoURL} alt="User Avatar" className={styles.avatar} />
@@ -155,13 +157,15 @@ export default function Account() {
           )}
         </div>
       </div>
-      <div className={styles.buttons}>
-        {isEditing ? (
-          <button className={styles.saveBtn} onClick={handleSave}>Save</button>
-        ) : (
-          <button className={styles.changeInfoBtn} onClick={handleEditToggle}>Change info</button>
-        )}
+        <div className={styles.buttons}>
+          {isEditing ? (
+            <button className={styles.saveBtn} onClick={handleSave}>Save</button>
+          ) : (
+            <button className={styles.changeInfoBtn} onClick={handleEditToggle}>Change info</button>
+          )}
+        </div>
       </div>
     </div>
+    
   );
 }

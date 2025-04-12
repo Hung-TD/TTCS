@@ -1,0 +1,41 @@
+/* scorePage.module.css */
+
+.container {
+    margin-top: 70px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    background: #cce5cc;
+    min-height: 100vh;
+  }
+  
+  .chartContainer {
+    margin-top: 20px;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 10px;
+  }
+  
+  .chartTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+    color: #333;
+  }
+  
+  /* Responsive tweaks */
+  @media (max-width: 768px) {
+    .chartContainer {
+      width: 90%;
+    }
+    .chartTitle {
+      font-size: 1.1rem;
+    }
+  }
+  

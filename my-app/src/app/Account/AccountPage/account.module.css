@@ -1,4 +1,7 @@
-/* account.module.css */
+.container{
+  background-color: #cce5cc;
+  height: calc(100vh - 50px);
+}
 
 .accountContainer {
     position: relative;

@@ -1,0 +1,80 @@
+.contentWithHeader {
+  padding-top: 20px;
+}
+
+/* Container cho toàn bộ component */
+.container {
+    margin-top: 90px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Tiêu đề của phần hiển thị điểm */
+  .title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+  }
+  
+  /* Danh sách các điểm */
+  .scoreItem {
+    list-style-type: disc;
+    margin-left: 20px;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    color: #555;
+  }
+  
+  /* Tên điểm và giá trị của điểm */
+  .scoreItem strong {
+    font-weight: 600;
+    min-width: 220px;
+    display: inline-block;
+  }
+  
+  /* Overall Score */
+  .overallScore {
+    margin-top: 20px;
+    padding: 12px;
+    border-top: 1px solid #ddd;
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+    background-color: #f4f4f4;
+    color: #2f8b2f;
+    border-radius: 4px;
+  }
+  
+  /* Student Response Section */
+  .responseSection {
+    margin-bottom: 30px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    border-left: 4px solid #3498db;
+  }
+  
+  .responseTitle {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #3498db;
+  }
+  
+  .responseText {
+    color: #555;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  
