@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from "react";
 import styles from "./scoreDisplay.module.css";
-import Header from "../HeaderLayout/page";
+import Header from "../../HeaderLayout/page";
 
 interface ScoreProps {
   score?: {
     "Grammatical Range & Accuracy"?: number;
     "Coherence & Cohesion"?: number;
     "Lexical Resource"?: number;
-    "Task Achievement"?: number;
+    "Task Response"?: number;
   };
   studentResponse: string;
 }
 
-// Function to call LanguageTool API and return corrected text
-const checkGrammar = async (text: string): Promise<{ correctedText: string, matches: any[] }> => {
+const checkGrammar = async (text: string): Promise<{ correctedText: string; matches: any[] }> => {
   const formData = new URLSearchParams();
   formData.append("text", text);
   formData.append("language", "en-US");
@@ -33,11 +32,10 @@ const checkGrammar = async (text: string): Promise<{ correctedText: string, matc
 
   const result = await response.json();
   return {
-    correctedText: text, // vẫn giữ nguyên gốc
+    correctedText: text,
     matches: result.matches || [],
   };
 };
-
 
 const highlightMistakes = (text: string, matches: any[]) => {
   if (!matches.length) return text;
@@ -52,12 +50,10 @@ const highlightMistakes = (text: string, matches: any[]) => {
       const end = match.offset + match.length;
       const replacement = match.replacements[0]?.value;
 
-      // Text trước lỗi
       if (start > lastIndex) {
         parts.push(<span key={`text-${index}`}>{text.slice(lastIndex, start)}</span>);
       }
 
-      // Lỗi được highlight
       parts.push(
         <span
           key={`mistake-${index}`}
@@ -71,7 +67,6 @@ const highlightMistakes = (text: string, matches: any[]) => {
       lastIndex = end;
     });
 
-  // Phần còn lại sau lỗi cuối cùng
   if (lastIndex < text.length) {
     parts.push(<span key="last-text">{text.slice(lastIndex)}</span>);
   }
@@ -91,7 +86,7 @@ const getSynonymsFromDatamuse = async (word: string): Promise<string[]> => {
 };
 
 const upgradeSimpleWords = async (text: string): Promise<(string | JSX.Element)[]> => {
-  const words = text.split(/\b/); // Tách từ giữ nguyên dấu câu
+  const words = text.split(/\b/);
 
   const upgradedWords = await Promise.all(
     words.map(async (word, idx) => {
@@ -101,10 +96,7 @@ const upgradeSimpleWords = async (text: string): Promise<(string | JSX.Element)[
       if (isWord) {
         const synonyms = await getSynonymsFromDatamuse(lower);
         const highBand = synonyms.find(
-          (w) =>
-            w.length > word.length + 2 && // Ưu tiên từ dài hơn
-            !w.includes(" ") &&
-            /^[a-zA-Z]+$/.test(w)
+          (w) => w.length > word.length + 2 && !w.includes(" ") && /^[a-zA-Z]+$/.test(w)
         );
         if (highBand) {
           return (
@@ -125,8 +117,7 @@ const upgradeSimpleWords = async (text: string): Promise<(string | JSX.Element)[
   return upgradedWords;
 };
 
-
-const ScoreDisplay: React.FC<ScoreProps> = ({ score, studentResponse }) => {
+const ScoreDisplayTask2: React.FC<ScoreProps> = ({ score, studentResponse }) => {
   const [grammarMatches, setGrammarMatches] = useState<any[]>([]);
   const [enhancedResponse, setEnhancedResponse] = useState<(string | JSX.Element)[]>([]);
 
@@ -134,45 +125,39 @@ const ScoreDisplay: React.FC<ScoreProps> = ({ score, studentResponse }) => {
     const runCheck = async () => {
       const result = await checkGrammar(studentResponse);
       setGrammarMatches(result.matches);
-  
+
       const upgraded = await upgradeSimpleWords(studentResponse);
       setEnhancedResponse(upgraded);
     };
     runCheck();
   }, [studentResponse]);
-  
 
   const grammar = score?.["Grammatical Range & Accuracy"] ?? 0;
   const cohesion = score?.["Coherence & Cohesion"] ?? 0;
   const lexical = score?.["Lexical Resource"] ?? 0;
-  const task = score?.["Task Achievement"] ?? 0;
+  const task = score?.["Task Response"] ?? 0;
   const overallScore = ((grammar + cohesion + lexical + task) / 4).toFixed(1);
 
   return (
     <div className={styles.container}>
       <Header />
       <div className={`${styles.mainContent} ${styles.contentWithHeader}`}>
-        <h2 className={styles.title}>IELTS Writing Task 1 Assessment</h2>
+        <h2 className={styles.title}>IELTS Writing Task 2 Assessment</h2>
 
         <div className={styles.responseSection}>
           <h3 className={styles.responseTitle}>Student Response (grammar issues):</h3>
-          <p className={styles.responseText}>
-            {highlightMistakes(studentResponse, grammarMatches)}
-          </p>
+          <p className={styles.responseText}>{highlightMistakes(studentResponse, grammarMatches)}</p>
 
           <h3 className={styles.responseTitle}>Upgraded Vocabulary (suggested):</h3>
-          <p className={styles.responseText}>
-            {enhancedResponse}
-          </p>
+          <p className={styles.responseText}>{enhancedResponse}</p>
         </div>
-
 
         <h3 className={styles.title}>Score Breakdown</h3>
         <ul>
           <li className={styles.scoreItem}><strong>Grammatical Range & Accuracy:</strong> {grammar}</li>
           <li className={styles.scoreItem}><strong>Coherence & Cohesion:</strong> {cohesion}</li>
           <li className={styles.scoreItem}><strong>Lexical Resource:</strong> {lexical}</li>
-          <li className={styles.scoreItem}><strong>Task Achievement:</strong> {task}</li>
+          <li className={styles.scoreItem}><strong>Task Response:</strong> {task}</li>
         </ul>
         <div className={styles.overallScore}>Overall Score: {overallScore}</div>
       </div>
@@ -180,5 +165,4 @@ const ScoreDisplay: React.FC<ScoreProps> = ({ score, studentResponse }) => {
   );
 };
 
-
-export default ScoreDisplay;
+export default ScoreDisplayTask2;
