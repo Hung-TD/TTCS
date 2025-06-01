@@ -1,0 +1,123 @@
+.container {
+    display: flex;
+    height: calc(100vh - 70px);
+    background-color: #f8f9fb;
+    overflow: hidden;
+  }
+  
+  .leftPanel, .rightPanel {
+    padding: 20px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .leftPanel {
+    padding-top: 0;
+    border-right: 2px solid #ccc;
+    overflow-y: auto;
+  }
+  
+  .divider {
+    width: 5px;
+    background: #888;
+    cursor: ew-resize;
+    transition: background 0.3s;
+  }
+  
+  .divider:hover {
+    background: #555;
+  }
+  
+  .textContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .inputText {
+    width: 100%;
+    height: 400px;
+    padding: 12px;
+    font-size: 18px;  /* Chỉnh font lớn hơn */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .wordCount {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .instructionText{
+  }
+  
+  .examTitle {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 16px;
+  }
+  
+  .examDescription {
+    margin-bottom: 20px;
+    line-height: 1.6;
+    color: #555;
+  }
+  
+  .issueContainer {
+    background-color: #f8f9fa;
+    border-left: 4px solid #6b8e23; /* Changed to moss green */
+    padding: 16px;
+    margin: 20px 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .issueTitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #556b2f; /* Updated to darker moss green */
+    margin-bottom: 10px;
+  }
+  
+  .issueText {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: #333;
+  }
+  
+  .examRules {
+    font-style: italic;
+    color: #666;
+    margin-top: 16px;
+    padding: 10px;
+    background-color: #f1f3f5;
+    border-radius: 4px;
+  }
+  
+  .loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+  }
+  
+  .loadingSpinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }

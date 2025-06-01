@@ -1,0 +1,129 @@
+.container{
+  background-color: #cce5cc;
+  height: calc(100vh - 50px);
+}
+
+.accountContainer {
+    position: relative;
+    top: 50px;
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+  }
+  
+  /* Navbar */
+  /* Navbar */
+.navbar {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-bottom: 25px;
+  }
+  
+  .navItem {
+    font-size: 0.9rem; /* Nhỏ hơn mặc định */
+    color: #888888; /* Màu xám nhẹ */
+    text-decoration: underline; /* Luôn có gạch chân */
+    font-weight: normal;
+    transition: color 0.3s ease-in-out;
+  }
+  
+  .navItem:hover {
+    color: #555555; /* Đậm hơn khi hover */
+  }
+  
+  /* Profile Section */
+  .profileSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 4px solid #0070f3;
+    object-fit: cover;
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .avatar:hover {
+    transform: scale(1.05);
+  }
+  
+  .userInfo {
+    text-align: center;
+  }
+  
+  .userName {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+  
+  .userDetail {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 5px;
+  }
+  
+  /* Input fields */
+  .inputField {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border 0.3s ease-in-out;
+  }
+  
+  .inputField:focus {
+    border: 1px solid #0070f3;
+  }
+  
+  /* Buttons */
+  .buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
+  }
+  
+  .changeInfoBtn,
+  .saveBtn {
+    padding: 12px 22px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .changeInfoBtn {
+    background-color: #f59e0b;
+    color: white;
+  }
+  
+  .saveBtn {
+    background-color: #10b981;
+    color: white;
+  }
+  
+  .changeInfoBtn:hover {
+    background-color: #d97706;
+    transform: scale(1.05);
+  }
+  
+  .saveBtn:hover {
+    background-color: #059669;
+    transform: scale(1.05);
+  }
+  

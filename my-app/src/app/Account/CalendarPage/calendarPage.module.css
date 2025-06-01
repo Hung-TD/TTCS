@@ -1,0 +1,93 @@
+.pageContainer {
+    background-color: #f9f9f9;
+    min-height: 100vh;
+  }
+  
+  .title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+  }
+  
+  .mainContent {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  
+  .calendarWrapper {
+    flex: 1;
+    max-width: 600px;
+  }
+  
+  .sidePanel {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .panelSection {
+    background-color: #ffffff;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dropdown {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: border 0.2s ease;
+    text-align: center;
+  }
+  
+  .dropdown:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+  }
+  
+  /* Nếu bạn không dùng textarea nữa */
+  .textArea {
+    display: none;
+  }
+  
+  .pointsBox {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #27ae60;
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+  
+  .textarea {
+    width: 95%;
+    min-height: 100px;
+    padding: 10px 12px;
+    margin-top: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: #333;
+    background-color: #f9f9f9;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    resize: vertical;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .textarea:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    background-color: #fff;
+  }
+  
